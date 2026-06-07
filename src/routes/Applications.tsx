@@ -1,12 +1,10 @@
-import { useMemo, useState } from "react";
 import { ApplicationFormModal } from "../components/ApplicationFormModal";
 import { ApplicationTable } from "../components/ApplicationTable";
+import { ExportCsvButtons } from "../components/ExportCsvButtons";
 import { useApplications } from "../context/ApplicationsContext";
-import {
-  filterApplications,
-  sortApplications,
-} from "../lib/db";
+import { filterApplications, sortApplications } from "../lib/db";
 import { APPLICATION_STATUSES, type Application, type SortOption } from "../lib/types";
+import { useMemo, useState } from "react";
 
 export function Applications() {
   const { applications, loading, error, addApplication, editApplication, removeApplication } =
@@ -51,9 +49,12 @@ export function Applications() {
           <h2>Applications</h2>
           <p>Track every role you have applied to.</p>
         </div>
-        <button className="button" type="button" onClick={openCreateModal}>
-          Add Application
-        </button>
+        <div className="header-actions">
+          <ExportCsvButtons variant="compact" applications={applications} />
+          <button className="button" type="button" onClick={openCreateModal}>
+            Add Application
+          </button>
+        </div>
       </header>
 
       <section className="toolbar card">
