@@ -304,6 +304,48 @@ select {
   color: #6b7280;
 }
 
+.email-summary {
+  margin-top: 0.75rem;
+  color: #374151;
+}
+
+.email-footer {
+  margin-top: 0.75rem;
+}
+
+.info-banner {
+  padding: 1rem 1.125rem;
+}
+
+.info-banner p,
+.success-state {
+  margin-top: 0.35rem;
+  color: #6b7280;
+}
+
+.success-state {
+  padding: 1rem 1.125rem;
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.settings-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-note {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.tag-local {
+  background: #ecfdf5;
+  color: #047857;
+}
+
 .deadline-date {
   color: #374151;
   font-size: 0.875rem;

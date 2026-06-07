@@ -6,7 +6,7 @@ export function Settings() {
       <header className="page-header">
         <div>
           <h2>Settings</h2>
-          <p>Configure JobPulse. Gmail and AI integrations arrive in later MVPs.</p>
+          <p>Configure JobPulse. Gmail and cloud AI integrations arrive in later MVPs.</p>
         </div>
       </header>
 
@@ -29,6 +29,18 @@ export function Settings() {
         </div>
 
         <div className="card settings-card">
+          <h3>Classification</h3>
+          <p>
+            JobPulse uses local keyword rules by default. Email content stays on your
+            device and is never sent to an external AI provider in this mode.
+          </p>
+          <div className="settings-status">
+            <span className="pill">Active: Local Rules</span>
+            <span className="settings-note">Provider: LocalRulesProvider</span>
+          </div>
+        </div>
+
+        <div className="card settings-card">
           <h3>Email</h3>
           <p>Connect Gmail to import job application updates automatically.</p>
           <button className="button secondary" type="button" disabled>
@@ -39,11 +51,11 @@ export function Settings() {
         <div className="card settings-card">
           <h3>AI Processing</h3>
           <p>
-            AI is optional. The default mode uses local rules only and sends no
-            email content to external providers.
+            Optional cloud AI providers will improve classification later. The app
+            already works without them using local rules only.
           </p>
           <button className="button secondary" type="button" disabled>
-            Configure AI (MVP 6)
+            Configure Cloud AI (MVP 6)
           </button>
         </div>
 
