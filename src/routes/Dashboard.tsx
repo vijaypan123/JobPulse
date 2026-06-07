@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { AlertFeed } from "../components/AlertFeed";
 import { ApplicationTable } from "../components/ApplicationTable";
 import { DeadlineList } from "../components/DeadlineList";
@@ -5,17 +6,23 @@ import { StatCard } from "../components/StatCard";
 import { useApplications } from "../context/ApplicationsContext";
 import {
   applicationsToDeadlines,
+  getAlerts,
   getDashboardStats,
   sortApplications,
 } from "../lib/db";
-import { mockAlerts } from "../lib/mockData";
+import type { AlertRecord } from "../lib/types";
 
 export function Dashboard() {
   const { applications, loading, error } = useApplications();
+  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const stats = getDashboardStats(applications);
   const recentApplications = sortApplications(applications, "lastUpdate").slice(0, 5);
   const deadlines = applicationsToDeadlines(applications);
-  const unreadAlerts = mockAlerts.filter((alert) => !alert.read);
+  const unreadAlerts = alerts.filter((alert) => !alert.read);
+
+  useEffect(() => {
+    void getAlerts().then(setAlerts);
+  }, [applications]);
 
   return (
     <div className="page">
@@ -59,7 +66,13 @@ export function Dashboard() {
                 <h3>Important Updates</h3>
                 <span className="section-meta">{unreadAlerts.length} unread</span>
               </div>
-              <AlertFeed alerts={mockAlerts.slice(0, 3)} />
+              {alerts.length > 0 ? (
+                <AlertFeed alerts={alerts.slice(0, 3)} />
+              ) : (
+                <div className="card empty-state">
+                  <p>No important updates yet. Connect Gmail to start importing alerts.</p>
+                </div>
+              )}
             </div>
 
             <div className="page-section">

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { StatusBadge } from "../components/StatusBadge";
+import { useGmail } from "../context/GmailContext";
 import { formatCategoryLabel } from "../lib/classifier";
 import { getEmails } from "../lib/db";
 import { processClassifierEmails } from "../lib/processEmail";
@@ -7,6 +9,7 @@ import { sampleClassifierEmails } from "../lib/sampleEmails";
 import type { EmailRecord } from "../lib/types";
 
 export function Emails() {
+  const { connected, syncing, syncNow } = useGmail();
   const [emails, setEmails] = useState<EmailRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -38,7 +41,10 @@ export function Emails() {
       setError(null);
       setStatusMessage(null);
 
-      const result = await processClassifierEmails(sampleClassifierEmails);
+      const result = await processClassifierEmails(sampleClassifierEmails, {
+        linkApplication: false,
+        createAlerts: false,
+      });
       await loadEmails();
 
       setStatusMessage(
@@ -68,21 +74,43 @@ export function Emails() {
             No email content is sent to an AI provider.
           </p>
         </div>
-        <button
-          className="button"
-          type="button"
-          disabled={processing}
-          onClick={() => void handleClassifySamples()}
-        >
-          {processing ? "Classifying..." : "Classify Sample Emails"}
-        </button>
+        <div className="header-actions">
+          {connected ? (
+            <button
+              className="button secondary"
+              type="button"
+              disabled={syncing}
+              onClick={() =>
+                void (async () => {
+                  await syncNow();
+                  await loadEmails();
+                })()
+              }
+            >
+              {syncing ? "Syncing Gmail..." : "Sync Gmail"}
+            </button>
+          ) : (
+            <Link className="button secondary" to="/settings/email">
+              Connect Gmail
+            </Link>
+          )}
+          <button
+            className="button"
+            type="button"
+            disabled={processing}
+            onClick={() => void handleClassifySamples()}
+          >
+            {processing ? "Classifying..." : "Classify Sample Emails"}
+          </button>
+        </div>
       </header>
 
       <section className="card info-banner">
         <strong>Local rules mode</strong>
         <p>
           JobPulse uses the built-in LocalRulesProvider to detect interview invites,
-          assessments, offers, rejections, and more. Gmail import arrives in MVP 5.
+          assessments, offers, rejections, and more. Connect Gmail to import real inbox
+          messages locally.
         </p>
       </section>
 

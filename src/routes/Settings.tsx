@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { ExportCsvButtons } from "../components/ExportCsvButtons";
 
 export function Settings() {
@@ -6,7 +7,7 @@ export function Settings() {
       <header className="page-header">
         <div>
           <h2>Settings</h2>
-          <p>Configure JobPulse. Gmail and cloud AI integrations arrive in later MVPs.</p>
+          <p>Configure JobPulse. Cloud AI integrations arrive in a later MVP.</p>
         </div>
       </header>
 
@@ -29,6 +30,14 @@ export function Settings() {
         </div>
 
         <div className="card settings-card">
+          <h3>Email</h3>
+          <p>Connect Gmail to import job application updates automatically.</p>
+          <Link className="button" to="/settings/email">
+            Manage Gmail Connection
+          </Link>
+        </div>
+
+        <div className="card settings-card">
           <h3>Classification</h3>
           <p>
             JobPulse uses local keyword rules by default. Email content stays on your
@@ -38,14 +47,6 @@ export function Settings() {
             <span className="pill">Active: Local Rules</span>
             <span className="settings-note">Provider: LocalRulesProvider</span>
           </div>
-        </div>
-
-        <div className="card settings-card">
-          <h3>Email</h3>
-          <p>Connect Gmail to import job application updates automatically.</p>
-          <button className="button secondary" type="button" disabled>
-            Connect Gmail (MVP 5)
-          </button>
         </div>
 
         <div className="card settings-card">

@@ -102,6 +102,7 @@ type BrowserStore = {
   emails: EmailRow[];
   alerts: AlertRow[];
   processedMessages: { gmail_message_id: string; processed_at: string; category?: string; important?: number }[];
+  settings: Record<string, string>;
   nextApplicationId: number;
   nextEmailId: number;
   nextAlertId: number;
@@ -113,6 +114,7 @@ function emptyBrowserStore(): BrowserStore {
     emails: [],
     alerts: [],
     processedMessages: [],
+    settings: {},
     nextApplicationId: 1,
     nextEmailId: 1,
     nextAlertId: 1,
@@ -542,6 +544,71 @@ export async function isMessageProcessed(gmailMessageId: string): Promise<boolea
 
   const store = readBrowserStore();
   return store.processedMessages.some((item) => item.gmail_message_id === gmailMessageId);
+}
+
+export async function getSetting(key: string): Promise<string | null> {
+  if (isTauriRuntime()) {
+    const db = await getSqlDatabase();
+    const rows = await db.select<{ value: string }[]>(
+      "SELECT value FROM settings WHERE key = $1",
+      [key],
+    );
+    return rows[0]?.value ?? null;
+  }
+
+  return readBrowserStore().settings[key] ?? null;
+}
+
+export async function setSetting(key: string, value: string): Promise<void> {
+  if (isTauriRuntime()) {
+    const db = await getSqlDatabase();
+    await db.execute(
+      `INSERT INTO settings (key, value) VALUES ($1, $2)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+      [key, value],
+    );
+    return;
+  }
+
+  const store = readBrowserStore();
+  store.settings[key] = value;
+  writeBrowserStore(store);
+}
+
+export async function deleteSetting(key: string): Promise<void> {
+  if (isTauriRuntime()) {
+    const db = await getSqlDatabase();
+    await db.execute("DELETE FROM settings WHERE key = $1", [key]);
+    return;
+  }
+
+  const store = readBrowserStore();
+  delete store.settings[key];
+  writeBrowserStore(store);
+}
+
+export async function findApplicationByCompanyAndRole(
+  company: string,
+  role?: string,
+): Promise<Application | null> {
+  const applications = await getApplications();
+  const normalizedCompany = company.trim().toLowerCase();
+  const normalizedRole = role?.trim().toLowerCase();
+
+  return (
+    applications.find((application) => {
+      const companyMatch = application.company.trim().toLowerCase() === normalizedCompany;
+      if (!companyMatch) {
+        return false;
+      }
+
+      if (!normalizedRole) {
+        return true;
+      }
+
+      return application.role.trim().toLowerCase() === normalizedRole;
+    }) ?? null
+  );
 }
 
 export function getDashboardStats(applications: Application[]) {
