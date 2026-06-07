@@ -48,12 +48,15 @@ npm run dev
 
 Open http://localhost:1420/
 
-## Gmail setup
+## Gmail setup (two options)
 
-1. Create a Google OAuth web client
-2. Add redirect URI: `http://localhost:1420/oauth/google/callback`
-3. Put the client ID in `.env` as `VITE_GOOGLE_CLIENT_ID`
-4. See [docs/gmail-setup.md](docs/gmail-setup.md) for full instructions
+**Option A — Sign in with Google (one-click)**  
+Set `VITE_BUILTIN_GOOGLE_CLIENT_ID` in `.env` before building/distributing the app.
+
+**Option B — Your own Google app (advanced)**  
+Set `VITE_GOOGLE_CLIENT_ID` in your local `.env` for full control of your Google Cloud project.
+
+You can enable both. See [docs/gmail-setup.md](docs/gmail-setup.md) for full instructions.
 
 ## Testing MVP 5
 

@@ -1,9 +1,13 @@
+import type { GmailAuthMode } from "./config";
+
 export type GmailAuthState = {
   accessToken: string;
   refreshToken?: string;
   expiresAt: number;
   email?: string;
   connectedAt: string;
+  authMode?: GmailAuthMode;
+  clientId?: string;
 };
 
 export type GmailTokenResponse = {

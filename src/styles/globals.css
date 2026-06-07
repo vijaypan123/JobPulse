@@ -594,6 +594,60 @@ select {
   overflow-x: auto;
 }
 
+.connection-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+.connection-option + .connection-option {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.connection-option h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.google-signin-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid #dadce0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #3c4043;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.15);
+}
+
+.google-signin-button:hover:not(:disabled) {
+  background: #f8f9fa;
+}
+
+.google-signin-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-signin-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #4285f4;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;

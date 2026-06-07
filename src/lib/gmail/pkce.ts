@@ -1,3 +1,6 @@
+import type { GmailAuthMode } from "./config";
+import { OAUTH_MODE_STORAGE_KEY, OAUTH_STATE_STORAGE_KEY, OAUTH_VERIFIER_STORAGE_KEY } from "./config";
+
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = "";
   bytes.forEach((byte) => {
@@ -25,23 +28,26 @@ export function generateOAuthState(): string {
   return base64UrlEncode(bytes);
 }
 
-export function storeOAuthSession(state: string, verifier: string): void {
-  sessionStorage.setItem("jobpulse_oauth_state", state);
-  sessionStorage.setItem("jobpulse_oauth_verifier", verifier);
+export function storeOAuthSession(state: string, verifier: string, mode: GmailAuthMode): void {
+  sessionStorage.setItem(OAUTH_STATE_STORAGE_KEY, state);
+  sessionStorage.setItem(OAUTH_VERIFIER_STORAGE_KEY, verifier);
+  sessionStorage.setItem(OAUTH_MODE_STORAGE_KEY, mode);
 }
 
-export function readOAuthSession(): { state: string; verifier: string } | null {
-  const state = sessionStorage.getItem("jobpulse_oauth_state");
-  const verifier = sessionStorage.getItem("jobpulse_oauth_verifier");
+export function readOAuthSession(): { state: string; verifier: string; mode: GmailAuthMode } | null {
+  const state = sessionStorage.getItem(OAUTH_STATE_STORAGE_KEY);
+  const verifier = sessionStorage.getItem(OAUTH_VERIFIER_STORAGE_KEY);
+  const mode = sessionStorage.getItem(OAUTH_MODE_STORAGE_KEY) as GmailAuthMode | null;
 
-  if (!state || !verifier) {
+  if (!state || !verifier || (mode !== "builtin" && mode !== "custom")) {
     return null;
   }
 
-  return { state, verifier };
+  return { state, verifier, mode };
 }
 
 export function clearOAuthSession(): void {
-  sessionStorage.removeItem("jobpulse_oauth_state");
-  sessionStorage.removeItem("jobpulse_oauth_verifier");
+  sessionStorage.removeItem(OAUTH_STATE_STORAGE_KEY);
+  sessionStorage.removeItem(OAUTH_VERIFIER_STORAGE_KEY);
+  sessionStorage.removeItem(OAUTH_MODE_STORAGE_KEY);
 }

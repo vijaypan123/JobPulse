@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
 import { useGmail } from "../context/GmailContext";
 import { getOAuthRedirectUri } from "../lib/gmail";
 
@@ -7,16 +8,22 @@ export function SettingsEmail() {
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     configured,
+    builtinAvailable,
+    customAvailable,
+    builtinClientId,
     connected,
     authState,
     lastSyncAt,
     syncing,
     error,
-    connectGmail,
+    connectGmailCustom,
+    completeBuiltinSignIn,
     disconnect,
     syncNow,
+    clearError,
   } = useGmail();
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
     if (searchParams.get("connected") !== "1") {
@@ -46,6 +53,8 @@ export function SettingsEmail() {
     }
   }
 
+  const displayError = localError ?? error;
+
   return (
     <div className="page">
       <header className="page-header">
@@ -63,19 +72,25 @@ export function SettingsEmail() {
 
       {!configured ? (
         <section className="card settings-card">
-          <h3>Setup Required</h3>
+          <h3>Gmail Not Configured Yet</h3>
           <p>
-            Add your Google OAuth client ID to a local <code>.env</code> file before
-            connecting Gmail.
+            This build does not include a built-in Google client ID, and no personal
+            <code> .env </code>
+            client ID was found.
           </p>
-          <pre className="setup-code">{`VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com`}</pre>
+          <p>Choose one of these paths:</p>
+          <ul className="settings-list">
+            <li>
+              <strong>Quick sign-in:</strong> maintainer sets{" "}
+              <code>VITE_BUILTIN_GOOGLE_CLIENT_ID</code>
+            </li>
+            <li>
+              <strong>Your own Gmail project:</strong> set{" "}
+              <code>VITE_GOOGLE_CLIENT_ID</code> in <code>.env</code>
+            </li>
+          </ul>
           <p>
-            Redirect URI to register in Google Cloud Console:
-            <br />
-            <code>{getOAuthRedirectUri()}</code>
-          </p>
-          <p>
-            See <code>docs/gmail-setup.md</code> for full setup steps.
+            See <code>docs/gmail-setup.md</code> for setup steps.
           </p>
         </section>
       ) : null}
@@ -87,6 +102,12 @@ export function SettingsEmail() {
             <>
               <p>
                 Connected as <strong>{authState?.email ?? "Gmail account"}</strong>
+              </p>
+              <p className="settings-note">
+                Mode:{" "}
+                {authState?.authMode === "builtin"
+                  ? "Sign in with Google (JobPulse)"
+                  : "Your own Google OAuth app"}
               </p>
               <p className="settings-note">
                 Scope: read-only Gmail access for local classification on your device.
@@ -111,14 +132,72 @@ export function SettingsEmail() {
             </>
           ) : (
             <>
-              <p>
-                Connect Gmail to search for likely job-related emails from the last 14 days.
-              </p>
-              <button className="button" type="button" onClick={() => void connectGmail()}>
-                Connect Gmail
-              </button>
+              <p>Choose how you want to connect Gmail.</p>
+
+              {builtinAvailable && builtinClientId ? (
+                <div className="connection-option">
+                  <h4>Quick connect</h4>
+                  <p className="settings-note">
+                    One-click Sign in with Google using the shared JobPulse OAuth app.
+                  </p>
+                  <GoogleSignInButton
+                    clientId={builtinClientId}
+                    disabled={syncing}
+                    onSuccess={completeBuiltinSignIn}
+                    onError={(message) => {
+                      clearError();
+                      setLocalError(message);
+                    }}
+                  />
+                </div>
+              ) : null}
+
+              {customAvailable ? (
+                <div className="connection-option">
+                  <h4>Your own Google app</h4>
+                  <p className="settings-note">
+                    Uses <code>VITE_GOOGLE_CLIENT_ID</code> from your local <code>.env</code>{" "}
+                    file. Best if you want full control of your Google Cloud project.
+                  </p>
+                  <button
+                    className="button secondary"
+                    type="button"
+                    onClick={() => void connectGmailCustom()}
+                  >
+                    Connect with your OAuth app
+                  </button>
+                </div>
+              ) : (
+                <div className="connection-option">
+                  <h4>Your own Google app</h4>
+                  <p className="settings-note">
+                    Add <code>VITE_GOOGLE_CLIENT_ID</code> to <code>.env</code> to enable this
+                    option.
+                  </p>
+                  <pre className="setup-code">{`VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com`}</pre>
+                  <p className="settings-note">
+                    Redirect URI: <code>{getOAuthRedirectUri()}</code>
+                  </p>
+                </div>
+              )}
             </>
           )}
+        </div>
+
+        <div className="card settings-card">
+          <h3>Connection Options</h3>
+          <ul className="settings-list">
+            <li>
+              <strong>Sign in with Google:</strong> fastest option when a built-in client ID is
+              included in the app build
+            </li>
+            <li>
+              <strong>Your own OAuth app:</strong> keep your Gmail credentials in local{" "}
+              <code>.env</code> and use your own Google Cloud project
+            </li>
+            <li>Both options request read-only Gmail access only</li>
+            <li>OAuth tokens are stored locally on your device</li>
+          </ul>
         </div>
 
         <div className="card settings-card">
@@ -139,7 +218,7 @@ export function SettingsEmail() {
       </section>
 
       {syncMessage ? <div className="card success-state">{syncMessage}</div> : null}
-      {error ? <div className="card error-state">{error}</div> : null}
+      {displayError ? <div className="card error-state">{displayError}</div> : null}
     </div>
   );
 }

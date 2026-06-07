@@ -1,69 +1,89 @@
 # Gmail Setup for JobPulse
 
-JobPulse connects to Gmail using Google OAuth with PKCE. All email processing happens locally on your device.
+JobPulse supports **two ways** to connect Gmail. Pick the one that fits how you want to run the app.
 
-## 1. Create a Google Cloud project
+## Option A — Sign in with Google (quickest)
 
-1. Open [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a project or select an existing one
-3. Enable the **Gmail API** for that project
+Best for users who just want to click **Sign in with Google** without touching `.env`.
 
-## 2. Configure OAuth consent screen
+### For app maintainers / distributors
 
-1. Go to **APIs & Services → OAuth consent screen**
-2. Choose **External** for personal testing or **Internal** for workspace use
-3. Add your email as a test user while the app is in testing mode
-4. Add the scope:
-   - `https://www.googleapis.com/auth/gmail.readonly`
-
-## 3. Create OAuth credentials
-
-1. Go to **APIs & Services → Credentials**
-2. Create credentials → **OAuth client ID**
-3. Application type: **Web application**
-4. Add this authorized redirect URI:
+1. Create a Google Cloud OAuth **Web application** client
+2. Enable the **Gmail API**
+3. Add this redirect URI:
 
 ```text
 http://localhost:1420/oauth/google/callback
 ```
 
-5. Copy the client ID
+4. Set the built-in client ID in `.env` before building JobPulse:
 
-## 4. Configure JobPulse locally
+```text
+VITE_BUILTIN_GOOGLE_CLIENT_ID=1234567890-abc.apps.googleusercontent.com
+```
 
-1. Copy `.env.example` to `.env`
-2. Set your client ID:
+5. Rebuild or restart the dev server
+
+Users can then open **Settings → Manage Gmail Connection** and click **Sign in with Google**.
+
+---
+
+## Option B — Your own Google OAuth app (advanced)
+
+Best for developers who want **full control** of their own Google Cloud project and credentials.
+
+### Steps
+
+1. Create a Google Cloud project
+2. Enable the **Gmail API**
+3. Configure the OAuth consent screen and add yourself as a test user
+4. Create an OAuth **Web application** client
+5. Add this redirect URI:
+
+```text
+http://localhost:1420/oauth/google/callback
+```
+
+6. Copy `.env.example` to `.env`
+7. Set your personal client ID:
 
 ```text
 VITE_GOOGLE_CLIENT_ID=1234567890-abc.apps.googleusercontent.com
 ```
 
-3. Restart the dev server:
+8. Restart the dev server
+9. In JobPulse, go to **Settings → Manage Gmail Connection**
+10. Click **Connect with your OAuth app**
 
-```powershell
-Set-Location D:\Github
-npm run dev
+---
+
+## Using both options
+
+You can enable **both** in the same build:
+
+```text
+VITE_GOOGLE_CLIENT_ID=your-personal-client.apps.googleusercontent.com
+VITE_BUILTIN_GOOGLE_CLIENT_ID=shared-jobpulse-client.apps.googleusercontent.com
 ```
 
-## 5. Connect Gmail in the app
+JobPulse will show:
 
-1. Open http://localhost:1420/
-2. Go to **Settings → Manage Gmail Connection**
-3. Click **Connect Gmail**
-4. Sign in and approve read-only Gmail access
-5. JobPulse will run an initial sync automatically
+- **Sign in with Google** → uses the built-in client ID (popup flow)
+- **Connect with your OAuth app** → uses your `.env` client ID (redirect flow)
+
+---
 
 ## What JobPulse reads
 
 - Gmail search results from the last 14 days using job-related subject filters
 - Message metadata only: sender, subject, snippet, received date, message ID
-- No full email bodies are stored by default
+- No full email bodies stored by default
 
 ## Privacy notes
 
 - OAuth tokens are stored locally in SQLite or browser localStorage during preview mode
 - Email content is classified with local keyword rules only
-- No cloud backend receives your inbox data
+- No JobPulse cloud backend receives your inbox data
 
 ## Troubleshooting
 
@@ -75,13 +95,13 @@ Make sure Google Cloud uses exactly:
 http://localhost:1420/oauth/google/callback
 ```
 
-### Gmail API not enabled
+### Built-in Sign in with Google is disabled
 
-Enable the Gmail API in Google Cloud Console for the same project as your OAuth client.
+The app build does not include `VITE_BUILTIN_GOOGLE_CLIENT_ID`. Use Option B or ask the maintainer to configure Option A.
 
-### App blocked during testing
+### Popup blocked
 
-Add your Google account under OAuth consent screen test users.
+Allow popups for `localhost:1420` when using **Sign in with Google**.
 
 ### Session expired
 
