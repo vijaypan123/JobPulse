@@ -8,12 +8,15 @@ import {
   type ReactNode,
 } from "react";
 import {
+  clearSampleApplications,
+  countSampleApplications,
   createApplication,
   deleteApplication,
   getApplications,
   initializeDatabase,
   updateApplication,
 } from "../lib/db";
+import { reconcileApplicationStatusesFromEmails } from "../lib/processEmail";
 import type { Application, ApplicationInput } from "../lib/types";
 
 type ApplicationsContextValue = {
@@ -24,6 +27,8 @@ type ApplicationsContextValue = {
   addApplication: (input: ApplicationInput) => Promise<void>;
   editApplication: (id: number, input: ApplicationInput) => Promise<void>;
   removeApplication: (id: number) => Promise<void>;
+  removeSampleApplications: () => Promise<number>;
+  sampleApplicationCount: () => Promise<number>;
 };
 
 const ApplicationsContext = createContext<ApplicationsContextValue | null>(null);
@@ -46,6 +51,7 @@ export function ApplicationsProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         setError(null);
         await initializeDatabase();
+        await reconcileApplicationStatusesFromEmails();
         const rows = await getApplications();
         if (active) {
           setApplications(rows);
@@ -93,6 +99,14 @@ export function ApplicationsProvider({ children }: { children: ReactNode }) {
     [refreshApplications],
   );
 
+  const removeSampleApplications = useCallback(async () => {
+    const removed = await clearSampleApplications();
+    await refreshApplications();
+    return removed;
+  }, [refreshApplications]);
+
+  const sampleApplicationCount = useCallback(async () => countSampleApplications(), []);
+
   const value = useMemo(
     () => ({
       applications,
@@ -102,6 +116,8 @@ export function ApplicationsProvider({ children }: { children: ReactNode }) {
       addApplication,
       editApplication,
       removeApplication,
+      removeSampleApplications,
+      sampleApplicationCount,
     }),
     [
       applications,
@@ -111,6 +127,8 @@ export function ApplicationsProvider({ children }: { children: ReactNode }) {
       addApplication,
       editApplication,
       removeApplication,
+      removeSampleApplications,
+      sampleApplicationCount,
     ],
   );
 

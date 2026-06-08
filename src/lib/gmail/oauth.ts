@@ -61,7 +61,7 @@ export async function startGmailOAuth(mode: GmailAuthMode): Promise<void> {
     code_challenge_method: "S256",
     state,
     access_type: "offline",
-    prompt: "consent",
+    prompt: "select_account consent",
     include_granted_scopes: "true",
   });
 
@@ -119,8 +119,25 @@ export async function completeGmailOAuthPopup(
   return authState;
 }
 
+function formatOAuthError(errorText: string): string {
+  if (errorText.includes("client_secret is missing")) {
+    return (
+      "Could not complete Gmail OAuth: Google requires a client secret for Web application OAuth clients. " +
+      "Add GOOGLE_CLIENT_SECRET to your .env file (from Google Cloud → Credentials → your OAuth client), " +
+      "restart npm run dev, and try again. Or recreate the OAuth client as type Desktop app instead."
+    );
+  }
+
+  return `Could not complete Gmail OAuth: ${errorText}`;
+}
+
 async function exchangeAuthCode(body: URLSearchParams): Promise<GmailTokenResponse> {
-  const response = await fetch(GOOGLE_TOKEN_URL, {
+  const tokenEndpoint =
+    import.meta.env.DEV && typeof window !== "undefined"
+      ? "/api/gmail/oauth/token"
+      : GOOGLE_TOKEN_URL;
+
+  const response = await fetch(tokenEndpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -130,7 +147,7 @@ async function exchangeAuthCode(body: URLSearchParams): Promise<GmailTokenRespon
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Could not complete Gmail OAuth: ${errorText}`);
+    throw new Error(formatOAuthError(errorText));
   }
 
   return (await response.json()) as GmailTokenResponse;

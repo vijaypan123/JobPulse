@@ -2,6 +2,19 @@
 
 Privacy-first desktop job application tracker. Connects to your email, detects job application updates, and builds a local dashboard of your job search. Your data stays on your device. AI is optional, and you choose the provider.
 
+## MVP 6 — Optional AI Classification
+
+This milestone adds:
+
+- **Ollama** (free, local) — best default for privacy
+- **Google Gemini** (free tier) — cloud option with free API key
+- **OpenAI-compatible APIs** — Groq, OpenRouter, etc.
+- AI settings page with provider, model, API key, and data mode controls
+- Automatic fallback to local rules if AI fails
+- `aiUsed` flag on classified emails
+
+See [docs/ai-setup.md](docs/ai-setup.md) for setup steps.
+
 ## MVP 5 — Gmail OAuth and Import
 
 This milestone adds:
@@ -84,5 +97,4 @@ See [docs/product-spec.md](docs/product-spec.md) for the full product specificat
 
 ## Next Steps
 
-- MVP 6: Optional cloud AI integrations
 - MVP 7: Privacy controls, notifications, and polish

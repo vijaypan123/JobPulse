@@ -24,6 +24,7 @@ import {
   type GmailImportSummary,
 } from "../lib/gmail";
 import { getSetting } from "../lib/db";
+import { reclassifyImportedEmails, type ReclassifySummary } from "../lib/processEmail";
 import { GMAIL_LAST_SYNC_SETTING_KEY } from "../lib/gmail/config";
 
 type GmailContextValue = {
@@ -40,6 +41,7 @@ type GmailContextValue = {
   completeBuiltinSignIn: (code: string) => Promise<void>;
   disconnect: () => Promise<void>;
   syncNow: () => Promise<GmailImportSummary | null>;
+  reclassifyWithAi: () => Promise<ReclassifySummary | null>;
   refreshStatus: () => Promise<void>;
   clearError: () => void;
 };
@@ -82,6 +84,24 @@ export function GmailProvider({ children }: { children: ReactNode }) {
       return summary;
     } catch (syncError) {
       setError(syncError instanceof Error ? syncError.message : "Gmail sync failed.");
+      return null;
+    } finally {
+      setSyncing(false);
+    }
+  }, [refreshApplications, refreshStatus]);
+
+  const reclassifyWithAi = useCallback(async () => {
+    try {
+      setSyncing(true);
+      setError(null);
+      const summary = await reclassifyImportedEmails();
+      await refreshApplications();
+      await refreshStatus();
+      return summary;
+    } catch (reclassifyError) {
+      setError(
+        reclassifyError instanceof Error ? reclassifyError.message : "AI reclassification failed.",
+      );
       return null;
     } finally {
       setSyncing(false);
@@ -141,6 +161,7 @@ export function GmailProvider({ children }: { children: ReactNode }) {
       completeBuiltinSignIn,
       disconnect,
       syncNow,
+      reclassifyWithAi,
       refreshStatus,
       clearError,
     }),
@@ -158,6 +179,7 @@ export function GmailProvider({ children }: { children: ReactNode }) {
       completeBuiltinSignIn,
       disconnect,
       syncNow,
+      reclassifyWithAi,
       refreshStatus,
       clearError,
     ],

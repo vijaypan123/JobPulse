@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { useAiSettings } from "../context/AiSettingsContext";
 import { useGmail } from "../context/GmailContext";
 import { getOAuthRedirectUri } from "../lib/gmail";
 
@@ -20,8 +21,10 @@ export function SettingsEmail() {
     completeBuiltinSignIn,
     disconnect,
     syncNow,
+    reclassifyWithAi,
     clearError,
   } = useGmail();
+  const { config: aiConfig } = useAiSettings();
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -48,10 +51,25 @@ export function SettingsEmail() {
     const summary = await syncNow();
     if (summary) {
       setSyncMessage(
-        `Sync complete: processed ${summary.processed}, skipped ${summary.skipped}, updated ${summary.applicationsUpdated} application(s), created ${summary.alertsCreated} alert(s).`,
+        `Sync complete: processed ${summary.processed}, skipped ${summary.skipped}, updated ${summary.applicationsUpdated} application(s), created ${summary.alertsCreated} alert(s).` +
+          (summary.skipped > 0 && summary.processed === 0
+            ? " Already-imported emails were skipped. Use Re-classify with AI to update them."
+            : ""),
       );
     }
   }
+
+  async function handleReclassifyWithAi() {
+    setSyncMessage(null);
+    const summary = await reclassifyWithAi();
+    if (summary) {
+      setSyncMessage(
+        `Re-classified ${summary.total} email(s): ${summary.aiUsed} with AI, ${summary.localFallback} fell back to local rules, updated ${summary.applicationsUpdated} application(s).`,
+      );
+    }
+  }
+
+  const aiActive = aiConfig.enabled && aiConfig.provider !== "local";
 
   const displayError = localError ?? error;
 
@@ -128,7 +146,23 @@ export function SettingsEmail() {
                 >
                   Disconnect Gmail
                 </button>
+                {aiActive ? (
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={syncing}
+                    onClick={() => void handleReclassifyWithAi()}
+                  >
+                    {syncing ? "Re-classifying..." : "Re-classify with AI"}
+                  </button>
+                ) : null}
               </div>
+              {aiActive ? (
+                <p className="settings-note">
+                  Sync Now only imports new Gmail messages. After enabling Ollama or Gemini, click
+                  Re-classify with AI to update emails and applications already in JobPulse.
+                </p>
+              ) : null}
             </>
           ) : (
             <>
@@ -157,7 +191,8 @@ export function SettingsEmail() {
                   <h4>Your own Google app</h4>
                   <p className="settings-note">
                     Uses <code>VITE_GOOGLE_CLIENT_ID</code> from your local <code>.env</code>{" "}
-                    file. Best if you want full control of your Google Cloud project.
+                    file. Best if you want full control of your Google Cloud project. Google will
+                    show an account picker so you can connect a non-primary Gmail.
                   </p>
                   <button
                     className="button secondary"
@@ -203,7 +238,7 @@ export function SettingsEmail() {
         <div className="card settings-card">
           <h3>Import Behavior</h3>
           <ul className="settings-list">
-            <li>Searches Gmail every 20 minutes while connected</li>
+            <li>Searches Gmail every 20 minutes while connected (last 30 days)</li>
             <li>Fetches metadata, subject, sender, and snippet only</li>
             <li>Skips messages already processed by Gmail message ID</li>
             <li>Classifies locally with keyword rules — no cloud AI</li>

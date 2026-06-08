@@ -121,6 +121,53 @@ function emptyBrowserStore(): BrowserStore {
   };
 }
 
+function nextIdFromRows<T extends { id: number }>(
+  rows: T[],
+  fallback: number,
+): number {
+  if (rows.length === 0) {
+    return fallback;
+  }
+
+  return rows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
+}
+
+function normalizeBrowserStore(parsed: Partial<BrowserStore> | null | undefined): BrowserStore {
+  const empty = emptyBrowserStore();
+  if (!parsed || typeof parsed !== "object") {
+    return empty;
+  }
+
+  const applications = Array.isArray(parsed.applications) ? parsed.applications : empty.applications;
+  const emails = Array.isArray(parsed.emails) ? parsed.emails : empty.emails;
+  const alerts = Array.isArray(parsed.alerts) ? parsed.alerts : empty.alerts;
+
+  return {
+    applications,
+    emails,
+    alerts,
+    processedMessages: Array.isArray(parsed.processedMessages)
+      ? parsed.processedMessages
+      : empty.processedMessages,
+    settings:
+      parsed.settings && typeof parsed.settings === "object"
+        ? parsed.settings
+        : empty.settings,
+    nextApplicationId:
+      typeof parsed.nextApplicationId === "number"
+        ? parsed.nextApplicationId
+        : nextIdFromRows(applications, empty.nextApplicationId),
+    nextEmailId:
+      typeof parsed.nextEmailId === "number"
+        ? parsed.nextEmailId
+        : nextIdFromRows(emails, empty.nextEmailId),
+    nextAlertId:
+      typeof parsed.nextAlertId === "number"
+        ? parsed.nextAlertId
+        : nextIdFromRows(alerts, empty.nextAlertId),
+  };
+}
+
 function readBrowserStore(): BrowserStore {
   const raw = localStorage.getItem(BROWSER_STORAGE_KEY);
   if (!raw) {
@@ -128,7 +175,14 @@ function readBrowserStore(): BrowserStore {
   }
 
   try {
-    return JSON.parse(raw) as BrowserStore;
+    const parsed = JSON.parse(raw) as Partial<BrowserStore>;
+    const store = normalizeBrowserStore(parsed);
+
+    if (!parsed.settings || typeof parsed.settings !== "object") {
+      writeBrowserStore(store);
+    }
+
+    return store;
   } catch {
     return emptyBrowserStore();
   }
@@ -161,6 +215,8 @@ async function getSqlDatabase(): Promise<SqlDatabase> {
   return dbPromise;
 }
 
+const SAMPLE_SEED_FLAG = "sample_applications_seeded";
+
 const seedApplications: ApplicationInput[] = [
   {
     company: "RBC",
@@ -169,7 +225,7 @@ const seedApplications: ApplicationInput[] = [
     dateApplied: "2026-06-01",
     lastUpdate: "2026-06-07",
     deadline: "2026-06-10",
-    source: "Manual",
+    source: "Sample",
     notes: "Recruiter asked for availability",
   },
   {
@@ -178,7 +234,7 @@ const seedApplications: ApplicationInput[] = [
     status: "Applied",
     dateApplied: "2026-06-04",
     lastUpdate: "2026-06-04",
-    source: "Manual",
+    source: "Sample",
     notes: "Application confirmation received",
   },
   {
@@ -187,7 +243,7 @@ const seedApplications: ApplicationInput[] = [
     status: "Rejected",
     dateApplied: "2026-05-28",
     lastUpdate: "2026-06-03",
-    source: "Manual",
+    source: "Sample",
     notes: "Not selected",
   },
   {
@@ -197,7 +253,7 @@ const seedApplications: ApplicationInput[] = [
     dateApplied: "2026-05-20",
     lastUpdate: "2026-06-06",
     deadline: "2026-06-10",
-    source: "Manual",
+    source: "Sample",
     notes: "Online assessment pending",
   },
   {
@@ -206,7 +262,7 @@ const seedApplications: ApplicationInput[] = [
     status: "No Response",
     dateApplied: "2026-05-15",
     lastUpdate: "2026-05-15",
-    source: "Manual",
+    source: "Sample",
   },
   {
     company: "TD Bank",
@@ -215,20 +271,81 @@ const seedApplications: ApplicationInput[] = [
     dateApplied: "2026-04-10",
     lastUpdate: "2026-06-05",
     deadline: "2026-06-12",
-    source: "Manual",
+    source: "Sample",
     notes: "Offer letter received",
   },
 ];
 
+function sampleFingerprint(
+  input: Pick<ApplicationInput, "company" | "role" | "status" | "dateApplied" | "notes">,
+): string {
+  return [
+    input.company.trim().toLowerCase(),
+    (input.role ?? "").trim().toLowerCase(),
+    input.status,
+    input.dateApplied ?? "",
+    (input.notes ?? "").trim().toLowerCase(),
+  ].join("|");
+}
+
+const SAMPLE_FINGERPRINTS = new Set(seedApplications.map(sampleFingerprint));
+
+const DEMO_COMPANY_NAMES = new Set(
+  seedApplications.map((application) => application.company.trim().toLowerCase()),
+);
+
+export function isSampleApplication(application: Application): boolean {
+  if (application.source === "Sample") {
+    return true;
+  }
+
+  if (SAMPLE_FINGERPRINTS.has(sampleFingerprint(application))) {
+    return true;
+  }
+
+  if (
+    application.source === "Manual" &&
+    DEMO_COMPANY_NAMES.has(application.company.trim().toLowerCase())
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export async function countSampleApplications(): Promise<number> {
+  const applications = await getApplications();
+  return applications.filter(isSampleApplication).length;
+}
+
+export async function clearSampleApplications(): Promise<number> {
+  const applications = await getApplications();
+  const sampleApplications = applications.filter(isSampleApplication);
+
+  for (const application of sampleApplications) {
+    await deleteApplication(application.id);
+  }
+
+  return sampleApplications.length;
+}
+
 async function seedInitialApplicationsIfEmpty(): Promise<void> {
+  const alreadySeeded = await getSetting(SAMPLE_SEED_FLAG);
+  if (alreadySeeded === "1") {
+    return;
+  }
+
   const existing = await getApplications();
   if (existing.length > 0) {
+    await setSetting(SAMPLE_SEED_FLAG, "1");
     return;
   }
 
   for (const application of seedApplications) {
     await createApplication(application);
   }
+
+  await setSetting(SAMPLE_SEED_FLAG, "1");
 }
 
 export async function initializeDatabase(): Promise<void> {
@@ -449,6 +566,97 @@ export async function createEmail(input: EmailInput): Promise<EmailRecord> {
   return mapEmailRow(row);
 }
 
+export async function updateEmail(
+  id: number,
+  input: Partial<EmailInput> & { applicationId?: number | null },
+): Promise<EmailRecord> {
+  if (isTauriRuntime()) {
+    const db = await getSqlDatabase();
+    const existingRows = await db.select<EmailRow[]>("SELECT * FROM emails WHERE id = $1", [id]);
+    const existing = existingRows[0];
+    if (!existing) {
+      throw new Error("Email not found");
+    }
+
+    await db.execute(
+      `UPDATE emails SET
+        application_id = $1,
+        sender = $2,
+        subject = $3,
+        snippet = $4,
+        received_at = $5,
+        category = $6,
+        importance = $7,
+        requires_action = $8,
+        summary = $9,
+        ai_used = $10
+      WHERE id = $11`,
+      [
+        input.applicationId !== undefined ? (input.applicationId ?? null) : existing.application_id,
+        input.sender ?? existing.sender,
+        input.subject ?? existing.subject,
+        input.snippet ?? existing.snippet,
+        input.receivedAt ?? existing.received_at,
+        input.category ?? existing.category,
+        input.importance ?? existing.importance,
+        input.requiresAction !== undefined
+          ? input.requiresAction
+            ? 1
+            : 0
+          : existing.requires_action,
+        input.summary ?? existing.summary,
+        input.aiUsed !== undefined ? (input.aiUsed ? 1 : 0) : existing.ai_used,
+        id,
+      ],
+    );
+
+    const rows = await db.select<EmailRow[]>("SELECT * FROM emails WHERE id = $1", [id]);
+    return mapEmailRow(rows[0]);
+  }
+
+  const store = readBrowserStore();
+  const index = store.emails.findIndex((row) => row.id === id);
+  if (index === -1) {
+    throw new Error("Email not found");
+  }
+
+  const existing = store.emails[index];
+  store.emails[index] = {
+    ...existing,
+    application_id:
+      input.applicationId !== undefined ? (input.applicationId ?? null) : existing.application_id,
+    sender: input.sender ?? existing.sender,
+    subject: input.subject ?? existing.subject,
+    snippet: input.snippet ?? existing.snippet,
+    received_at: input.receivedAt ?? existing.received_at,
+    category: input.category ?? existing.category,
+    importance: input.importance ?? existing.importance,
+    requires_action:
+      input.requiresAction !== undefined
+        ? input.requiresAction
+          ? 1
+          : 0
+        : existing.requires_action,
+    summary: input.summary ?? existing.summary,
+    ai_used: input.aiUsed !== undefined ? (input.aiUsed ? 1 : 0) : existing.ai_used,
+  };
+
+  writeBrowserStore(store);
+  return mapEmailRow(store.emails[index]);
+}
+
+export async function clearProcessedMessages(): Promise<void> {
+  if (isTauriRuntime()) {
+    const db = await getSqlDatabase();
+    await db.execute("DELETE FROM processed_messages");
+    return;
+  }
+
+  const store = readBrowserStore();
+  store.processedMessages = [];
+  writeBrowserStore(store);
+}
+
 export async function getAlerts(): Promise<AlertRecord[]> {
   if (isTauriRuntime()) {
     const db = await getSqlDatabase();
@@ -592,23 +800,48 @@ export async function findApplicationByCompanyAndRole(
   role?: string,
 ): Promise<Application | null> {
   const applications = await getApplications();
-  const normalizedCompany = company.trim().toLowerCase();
+  const normalizedCompany = normalizeCompanyKey(company);
   const normalizedRole = role?.trim().toLowerCase();
 
-  return (
-    applications.find((application) => {
-      const companyMatch = application.company.trim().toLowerCase() === normalizedCompany;
-      if (!companyMatch) {
-        return false;
-      }
-
-      if (!normalizedRole) {
-        return true;
-      }
-
-      return application.role.trim().toLowerCase() === normalizedRole;
-    }) ?? null
+  const companyMatches = applications.filter((application) =>
+    companiesMatch(normalizedCompany, normalizeCompanyKey(application.company)),
   );
+
+  if (companyMatches.length === 0) {
+    return null;
+  }
+
+  if (normalizedRole) {
+    const exactRoleMatch = companyMatches.find(
+      (application) => application.role.trim().toLowerCase() === normalizedRole,
+    );
+    if (exactRoleMatch) {
+      return exactRoleMatch;
+    }
+  }
+
+  return companyMatches.sort((a, b) => b.lastUpdate.localeCompare(a.lastUpdate))[0];
+}
+
+function normalizeCompanyKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s&]/g, "")
+    .replace(/\s+(inc|ltd|llc|corp|corporation|limited|company|co)\.?$/i, "")
+    .replace(/\s+/g, " ");
+}
+
+function companiesMatch(left: string, right: string): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (left.length >= 3 && right.length >= 3) {
+    return left.includes(right) || right.includes(left);
+  }
+
+  return false;
 }
 
 export function getDashboardStats(applications: Application[]) {

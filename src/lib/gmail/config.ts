@@ -15,17 +15,33 @@ export const OAUTH_MODE_STORAGE_KEY = "jobpulse_oauth_mode";
 
 export const GMAIL_SYNC_INTERVAL_MS = 20 * 60 * 1000;
 
+export const GMAIL_IMPORT_MAX_RESULTS = 100;
+
 export const JOB_SEARCH_QUERY = [
-  "newer_than:14d (",
+  "newer_than:30d (",
   "subject:interview OR",
   "subject:application OR",
   "subject:assessment OR",
   "subject:offer OR",
   "subject:recruiter OR",
+  "subject:candidacy OR",
+  "subject:candidate OR",
+  "subject:hiring OR",
+  "subject:screening OR",
   "subject:\"next steps\" OR",
   "subject:\"thank you for applying\" OR",
+  "subject:\"application received\" OR",
+  "subject:\"application update\" OR",
+  "subject:\"your application\" OR",
   "subject:unfortunately OR",
-  "subject:congratulations",
+  "subject:congratulations OR",
+  "from:(greenhouse.io OR lever.co OR workday.com OR icims.com OR smartrecruiters.com OR ashbyhq.com OR jobvite.com OR myworkdayjobs.com) OR",
+  "\"thank you for applying\" OR",
+  "\"application received\" OR",
+  "\"schedule your interview\" OR",
+  "\"online assessment\" OR",
+  "\"not selected\" OR",
+  "\"moving forward with other candidates\"",
   ")",
 ].join(" ");
 

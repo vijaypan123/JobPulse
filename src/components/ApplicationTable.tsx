@@ -30,36 +30,36 @@ export function ApplicationTable({
         <table className="data-table">
           <thead>
             <tr>
-              <th>Company</th>
-              <th>Role</th>
+              <th className="company-cell">Company</th>
+              <th className="role-cell">Role</th>
               <th>Status</th>
-              {!compact && <th>Date Applied</th>}
-              <th>Last Update</th>
-              {!compact && <th>Deadline</th>}
+              {!compact && <th className="date-cell">Date Applied</th>}
+              <th className="date-cell">Last Update</th>
+              {!compact && <th className="date-cell">Deadline</th>}
               {!compact && <th>Action</th>}
               {!compact && <th>Source</th>}
-              {!compact && <th>Notes</th>}
-              {showActions && <th>Manage</th>}
+              {!compact && <th className="notes-cell">Notes</th>}
+              {showActions && <th className="manage-cell">Manage</th>}
             </tr>
           </thead>
           <tbody>
             {applications.map((application) => (
               <tr key={application.id}>
-                <td>{application.company}</td>
-                <td>{application.role}</td>
+                <td className="company-cell">{application.company}</td>
+                <td className="role-cell">{application.role}</td>
                 <td>
                   <StatusBadge status={application.status} />
                 </td>
-                {!compact && <td>{application.dateApplied || "—"}</td>}
-                <td>{application.lastUpdate || "—"}</td>
-                {!compact && <td>{application.deadline ?? "—"}</td>}
+                {!compact && <td className="date-cell">{application.dateApplied || "—"}</td>}
+                <td className="date-cell">{application.lastUpdate || "—"}</td>
+                {!compact && <td className="date-cell">{application.deadline ?? "—"}</td>}
                 {!compact && (
                   <td>{application.actionNeeded ? "Yes" : "No"}</td>
                 )}
                 {!compact && <td>{application.source}</td>}
                 {!compact && <td className="notes-cell">{application.notes ?? "—"}</td>}
                 {showActions && (
-                  <td>
+                  <td className="manage-cell">
                     <div className="table-actions">
                       <button
                         className="button-link"

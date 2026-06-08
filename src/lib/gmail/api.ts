@@ -1,4 +1,4 @@
-import { GMAIL_API_BASE, JOB_SEARCH_QUERY } from "./config";
+import { GMAIL_API_BASE, GMAIL_IMPORT_MAX_RESULTS, JOB_SEARCH_QUERY } from "./config";
 import type {
   GmailMessageListResponse,
   GmailMessageResponse,
@@ -16,19 +16,34 @@ export async function fetchGmailProfile(accessToken: string): Promise<GmailProfi
 
 export async function searchJobRelatedMessages(
   accessToken: string,
-  maxResults = 50,
+  maxResults = GMAIL_IMPORT_MAX_RESULTS,
 ): Promise<string[]> {
-  const params = new URLSearchParams({
-    q: JOB_SEARCH_QUERY,
-    maxResults: String(maxResults),
-  });
+  const messageIds: string[] = [];
+  let pageToken: string | undefined;
 
-  const response = await gmailRequest<GmailMessageListResponse>(
-    `/users/me/messages?${params.toString()}`,
-    accessToken,
-  );
+  do {
+    const params = new URLSearchParams({
+      q: JOB_SEARCH_QUERY,
+      maxResults: String(Math.min(maxResults - messageIds.length, 100)),
+    });
 
-  return response.messages?.map((message) => message.id) ?? [];
+    if (pageToken) {
+      params.set("pageToken", pageToken);
+    }
+
+    const response = await gmailRequest<GmailMessageListResponse>(
+      `/users/me/messages?${params.toString()}`,
+      accessToken,
+    );
+
+    for (const message of response.messages ?? []) {
+      messageIds.push(message.id);
+    }
+
+    pageToken = response.nextPageToken;
+  } while (pageToken && messageIds.length < maxResults);
+
+  return messageIds;
 }
 
 export async function fetchGmailMessage(

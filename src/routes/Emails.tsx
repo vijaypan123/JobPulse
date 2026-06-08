@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { StatusBadge } from "../components/StatusBadge";
 import { useGmail } from "../context/GmailContext";
-import { formatCategoryLabel } from "../lib/classifier";
+import { useAiSettings } from "../context/AiSettingsContext";
+import { formatCategoryLabel, providerLabel, statusFromCategory } from "../lib/classifier";
 import { getEmails } from "../lib/db";
 import { processClassifierEmails } from "../lib/processEmail";
 import { sampleClassifierEmails } from "../lib/sampleEmails";
@@ -10,6 +11,7 @@ import type { EmailRecord } from "../lib/types";
 
 export function Emails() {
   const { connected, syncing, syncNow } = useGmail();
+  const { config: aiConfig } = useAiSettings();
   const [emails, setEmails] = useState<EmailRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -106,11 +108,15 @@ export function Emails() {
       </header>
 
       <section className="card info-banner">
-        <strong>Local rules mode</strong>
+        <strong>
+          {aiConfig.enabled && aiConfig.provider !== "local"
+            ? `${providerLabel(aiConfig.provider)} mode`
+            : "Local rules mode"}
+        </strong>
         <p>
-          JobPulse uses the built-in LocalRulesProvider to detect interview invites,
-          assessments, offers, rejections, and more. Connect Gmail to import real inbox
-          messages locally.
+          {aiConfig.enabled && aiConfig.provider !== "local"
+            ? "JobPulse sends the selected email fields to your chosen AI provider for classification. If AI fails, local rules are used automatically."
+            : "JobPulse uses the built-in LocalRulesProvider. No email content is sent to an AI provider."}
         </p>
       </section>
 
@@ -149,9 +155,7 @@ export function Emails() {
                   ) : null}
                 </div>
                 <div className="email-footer">
-                  <StatusBadge
-                    status={mapSuggestedStatus(email.summary)}
-                  />
+                  <StatusBadge status={statusFromCategory(email.category)} />
                 </div>
               </li>
             ))}
@@ -160,22 +164,4 @@ export function Emails() {
       ) : null}
     </div>
   );
-}
-
-function mapSuggestedStatus(summary?: string) {
-  if (!summary) {
-    return "Unknown" as const;
-  }
-
-  const match = summary.match(/Suggested status:\s([A-Za-z ]+)\./);
-  return (match?.[1]?.trim() ?? "Unknown") as
-    | "Applied"
-    | "Assessment"
-    | "Interview"
-    | "Final Round"
-    | "Offer"
-    | "Rejected"
-    | "Closed"
-    | "No Response"
-    | "Unknown";
 }

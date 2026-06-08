@@ -1,5 +1,6 @@
 import { ApplicationFormModal } from "../components/ApplicationFormModal";
 import { ApplicationTable } from "../components/ApplicationTable";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ExportCsvButtons } from "../components/ExportCsvButtons";
 import { useApplications } from "../context/ApplicationsContext";
 import { filterApplications, sortApplications } from "../lib/db";
@@ -14,6 +15,8 @@ export function Applications() {
   const [sortBy, setSortBy] = useState<SortOption>("lastUpdate");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingApplication, setEditingApplication] = useState<Application | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Application | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const visibleApplications = useMemo(
     () => sortApplications(filterApplications(applications, searchQuery, statusFilter), sortBy),
@@ -30,16 +33,22 @@ export function Applications() {
     setModalOpen(true);
   }
 
-  async function handleDelete(application: Application) {
-    const confirmed = window.confirm(
-      `Delete ${application.company} — ${application.role || "application"}?`,
-    );
+  function handleDelete(application: Application) {
+    setDeleteTarget(application);
+  }
 
-    if (!confirmed) {
+  async function confirmDelete() {
+    if (!deleteTarget) {
       return;
     }
 
-    await removeApplication(application.id);
+    try {
+      setDeleting(true);
+      await removeApplication(deleteTarget.id);
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -109,6 +118,24 @@ export function Applications() {
             await editApplication(editingApplication.id, input);
           } else {
             await addApplication(input);
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete application?"
+        message={
+          deleteTarget
+            ? `Remove ${deleteTarget.company} — ${deleteTarget.role || "application"} from your tracker? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          if (!deleting) {
+            setDeleteTarget(null);
           }
         }}
       />

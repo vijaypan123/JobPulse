@@ -1,5 +1,5 @@
 import { isMessageProcessed, setSetting } from "../db";
-import { processClassifierEmail } from "../processEmail";
+import { processClassifierEmail, reconcileApplicationStatusesFromEmails } from "../processEmail";
 import type { ClassifierEmailInput } from "../classifier/types";
 import { fetchGmailMessage, searchJobRelatedMessages } from "./api";
 import { GMAIL_LAST_SYNC_SETTING_KEY } from "./config";
@@ -43,6 +43,7 @@ export async function importGmailMessages(): Promise<GmailImportSummary> {
   }
 
   await setSetting(GMAIL_LAST_SYNC_SETTING_KEY, new Date().toISOString());
+  await reconcileApplicationStatusesFromEmails();
   return summary;
 }
 
